@@ -1,0 +1,119 @@
+name: Build Warp (Win + Mac)
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [master]
+    types: [opened, reopened, synchronize]
+
+env:
+  CARGO_TERM_COLOR: always
+  MACOSX_DEPLOYMENT_TARGET: "10.14"
+  RUSTFLAGS: -C debuginfo=line-tables-only --cfg=web_sys_unstable_apis
+
+jobs:
+  build-macos:
+    name: Build macOS App
+    runs-on: macos-13
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref || github.ref }}
+
+      - uses: ./.github/actions/prepare_environment
+        with:
+          target_os: macos
+          is_self_hosted: false
+          install_release_deps: true
+
+      - name: Install cargo-bundle
+        run: script/install_cargo_bundle
+
+      - name: Install create-dmg
+        run: brew install create-dmg
+
+      - name: Build macOS app (unsigned)
+        run: |
+          ./script/bundle --nosign --nouniversal --channel dev --arch $(rustc --print cfg | grep target_arch | head -1 | sed 's/target_arch = "//;s/"//')
+
+      - name: Find and upload DMG/app
+        run: |
+          echo "=== Looking for build output ==="
+          find target -name "*.app" -type d 2>/dev/null | head -5
+          find target -name "*.dmg" -type f 2>/dev/null | head -5
+          ls -la target/*/bundle/osx/ 2>/dev/null || true
+          ls -la target/aarch64-apple-darwin/release-lto-debug_assertions/bundle/osx/ 2>/dev/null || true
+          ls -la target/x86_64-apple-darwin/release-lto-debug_assertions/bundle/osx/ 2>/dev/null || true
+
+      - name: Create tarball of app bundle if no DMG
+        run: |
+          APP=$(find target -maxdepth 5 -name "WarpDev.app" -type d 2>/dev/null | head -1)
+          if [ -n "$APP" ]; then
+            echo "Found app at: $APP"
+            cd "$(dirname "$APP")"
+            tar czf /tmp/warp-macos.tar.gz "$(basename "$APP")"
+            echo "Created /tmp/warp-macos.tar.gz"
+          else
+            echo "No app bundle found, checking for binary..."
+            BINARY=$(find target -name "dev" -type f 2>/dev/null | head -1)
+            if [ -n "$BINARY" ]; then
+              echo "Found binary at: $BINARY"
+              tar czf /tmp/warp-macos-binary.tar.gz -C "$(dirname "$BINARY)"" "$(basename "$BINARY")"
+              echo "Created /tmp/warp-macos-binary.tar.gz"
+            fi
+          fi
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: warp-macos-build
+          path: |
+            target/**/bundle/osx/*.dmg
+            target/**/bundle/osx/*.app
+            /tmp/warp-macos*.tar.gz
+          retention-days: 30
+          if-no-files-found: warn
+
+  build-windows:
+    name: Build Windows App
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref || github.ref }}
+
+      - uses: ./.github/actions/prepare_environment
+        with:
+          target_os: windows
+          is_self_hosted: false
+          install_release_deps: true
+
+      - name: Install cargo-bundle
+        run: script/install_cargo_bundle
+        shell: bash
+
+      - name: Build Windows app (unsigned)
+        shell: pwsh
+        run: |
+          ./script/windows/bundle.ps1 -Nosign -Nouniversal -Channel dev
+
+      - name: Find build output
+        shell: pwsh
+        run: |
+          Write-Host "=== Looking for build output ==="
+          Get-ChildItem -Path target -Recurse -Filter "*.exe" -ErrorAction SilentlyContinue | Select-Object -First 10 FullName
+          Get-ChildItem -Path target -Recurse -Filter "*.msi" -ErrorAction SilentlyContinue | Select-Object -First 5 FullName
+          Get-ChildItem -Path target -Recurse -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -like "*Warp*" } | Select-Object -First 10 FullName
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: warp-windows-build
+          path: |
+            target/**/bundle/windows/**/*.exe
+            target/**/bundle/windows/**/*.msi
+            target/**/release*/**/*.exe
+          retention-days: 30
+          if-no-files-found: warn
