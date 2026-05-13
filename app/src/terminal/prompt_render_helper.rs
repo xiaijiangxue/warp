@@ -87,9 +87,14 @@ pub fn should_render_prompt_on_same_line(
     // 1. The user is using a custom prompt (PS1)
     // 2. The user has the same line prompt setting enabled for their Warp prompt.
 
-    // If universal developer input is enabled, ignore PS1 rendering logic
+    // If universal developer input is enabled, check if same_line_prompt is enabled
+    // before falling through to the PS1/same_line_prompt logic below.
     if is_universal_developer_input {
-        return false;
+        let session_settings = SessionSettings::as_ref(app);
+        return session_settings
+            .saved_prompt
+            .value()
+            .same_line_prompt_enabled();
     }
 
     let should_render_ps1 = should_render_ps1_prompt(terminal_model, app);

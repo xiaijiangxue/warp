@@ -1,0 +1,110 @@
+name: Build Warp (Win + Mac)
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [master]
+    types: [opened, reopened, synchronize]
+
+env:
+  CARGO_TERM_COLOR: always
+  MACOSX_DEPLOYMENT_TARGET: "10.14"
+  RUSTFLAGS: -C debuginfo=line-tables-only --cfg=web_sys_unstable_apis
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build-macos:
+    name: Build macOS App
+    runs-on: macos-13
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref || github.ref }}
+
+      - uses: ./.github/actions/prepare_environment
+        with:
+          target_os: macos
+          is_self_hosted: false
+          install_release_deps: true
+
+      - name: Install cargo-bundle
+        run: script/install_cargo_bundle
+
+      - name: Install create-dmg
+        run: brew install create-dmg
+
+      - name: Build macOS app (unsigned, single arch)
+        run: |
+          ./script/bundle --nosign --nouniversal --channel dev
+
+      - name: Package app as tarball
+        run: |
+          APP=$(find target -maxdepth 5 -name "WarpDev.app" -type d 2>/dev/null | head -1)
+          if [ -n "$APP" ]; then
+            echo "Found app: $APP"
+            cd "$(dirname "$APP")"
+            tar czf /tmp/warp-macos.tar.gz "$(basename "$APP")"
+            echo "Created /tmp/warp-macos.tar.gz ($(du -h /tmp/warp-macos.tar.gz | cut -f1))"
+          else
+            echo "Looking for binary instead..."
+            find target -name "dev" -type f 2>/dev/null | head -5
+            find target -name "*.dmg" -type f 2>/dev/null | head -5
+          fi
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: warp-macos-build
+          path: /tmp/warp-macos*.tar.gz
+          retention-days: 30
+          if-no-files-found: warn
+
+  build-windows:
+    name: Build Windows App
+    runs-on: windows-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref || github.ref }}
+
+      - uses: ./.github/actions/prepare_environment
+        with:
+          target_os: windows
+          is_self_hosted: false
+          install_release_deps: true
+
+      - name: Install cargo-bundle
+        run: script/install_cargo_bundle
+        shell: bash
+
+      - name: Build Windows binary only (skip installer)
+        shell: pwsh
+        run: |
+          ./script/windows/bundle.ps1 -Channel dev -SkipBuildInstaller
+
+      - name: Find and package output
+        shell: pwsh
+        run: |
+          Write-Host "=== Searching for built files ==="
+          $exeFiles = Get-ChildItem -Path target -Recurse -Filter "*.exe" -ErrorAction SilentlyContinue | Where-Object { $_.FullName -notmatch ".cargo" }
+          foreach ($f in $exeFiles) { Write-Host "EXE: $($f.FullName) ($([math]::Round($f.Length/1MB)) MB)" }
+
+          $mainExe = Get-ChildItem -Path target -Recurse -Filter "dev.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($mainExe) {
+            Write-Host "`nMain binary found: $($mainExe.FullName)"
+            Compress-Archive -Path $mainExe.FullName -DestinationPath "C:\warp-windows.zip"
+            Write-Host "Created C:\warp-windows.zip"
+          } else {
+            Write-Host "dev.exe not found, trying other names..."
+            Get-ChildItem -Path target -Recurse -Filter "warp.exe" -ErrorAction SilentlyContinue | Select-Object -First 3 FullName
+          }
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: warp-windows-build
+          path: C:\warp-windows.zip
+          retention-days: 30
+          if-no-files-found: warn
