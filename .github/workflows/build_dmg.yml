@@ -34,6 +34,7 @@ jobs:
       - name: Install build dependencies
         run: |
           brew install create-dmg protobuf
+          ./script/install_cargo_release_deps
 
       - name: Install cargo-bundle
         run: ./script/install_cargo_bundle
