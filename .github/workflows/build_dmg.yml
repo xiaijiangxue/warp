@@ -1,0 +1,57 @@
+name: Build macOS DMG (Apple Silicon)
+
+on:
+  workflow_dispatch:
+    inputs:
+      debug:
+        description: 'Debug build (faster, but not optimized)'
+        type: boolean
+        default: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-dmg:
+    name: Build Warp DMG (arm64)
+    runs-on: macos-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: macos-arm64-oss-v2
+
+      - name: Install build dependencies
+        run: |
+          brew install create-dmg protobuf
+
+      - name: Install cargo-bundle
+        run: ./script/install_cargo_bundle
+
+      - name: Build and bundle DMG
+        id: bundle
+        run: |
+          BUILD_FLAGS="--nosign --arch aarch64 --channel oss --dmg-name-suffix arm64"
+          if [[ "${{ inputs.debug }}" == "true" ]]; then
+            BUILD_FLAGS="$BUILD_FLAGS --debug"
+          fi
+          ./script/bundle $BUILD_FLAGS
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Warp-zh-CN-arm64
+          path: ${{ steps.bundle.outputs.dmg_path }}
+          retention-days: 7
