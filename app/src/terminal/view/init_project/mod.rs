@@ -40,8 +40,6 @@ use crate::view_components::DismissibleToast;
 use crate::workspace::ToastStack;
 use crate::{send_telemetry_from_ctx, TelemetryEvent};
 
-const ONBOARDING_TEXT: &str = "Great - let's begin setting up this project! Would you like to give me permission to index this codebase? It allows me to quickly understand context and provide more targeted solutions when working in this codebase. No code is stored on Warp servers.";
-const ALREADY_SETUP_TEXT: &str = "It looks like this project has already been initialized. You can re-generate the AGENTS.md for this codebase by clicking the button below.";
 // Native Warp rules file format.
 pub const FILES_TO_CHECK: [&str; 2] = ["AGENTS.md", "WARP.md"];
 // File formats that can be linked to WARP.md.
@@ -393,7 +391,7 @@ impl InitStepBlock {
                 false,
             ),
             simple_navigation_button(
-                "Skip for now.".to_string(),
+                t!("init_project.skip_for_now_period").to_string(),
                 mouse_states.skip_button.clone(),
                 InitProjectBlockAction::SkipLanguageServers,
                 false,
@@ -407,13 +405,13 @@ impl InitStepBlock {
     ) -> Vec<KeyboardNavigableButtonBuilder> {
         vec![
             simple_navigation_button(
-                "Yes, index this codebase.".to_string(),
+                t!("init_project.yes_index_codebase").to_string(),
                 mouse_states.index_button.clone(),
                 InitProjectBlockAction::IndexCodebase(pwd_path.to_path_buf()),
                 false,
             ),
             simple_navigation_button(
-                "Skip for now.".to_string(),
+                t!("init_project.skip_for_now_period").to_string(),
                 mouse_states.skip_button.clone(),
                 InitProjectBlockAction::SkipIndex,
                 false,
@@ -439,13 +437,13 @@ impl InitStepBlock {
         }
 
         buttons.push(simple_navigation_button(
-            "Generate AGENTS.md file".to_string(),
+            t!("init_project.generate_agents_file").to_string(),
             mouse_states.generate_button.clone(),
             InitProjectBlockAction::GenerateRules,
             false,
         ));
         buttons.push(simple_navigation_button(
-            "Skip AGENTS.md generation for now".to_string(),
+            t!("init_project.skip_agents_generation").to_string(),
             mouse_states.skip_button.clone(),
             InitProjectBlockAction::SkipRules,
             false,
@@ -459,13 +457,13 @@ impl InitStepBlock {
     ) -> Vec<KeyboardNavigableButtonBuilder> {
         vec![
             simple_navigation_button(
-                "Create an environment".to_string(),
+                t!("init_project.create_environment").to_string(),
                 mouse_states.create_button.clone(),
                 InitProjectBlockAction::StartCreateEnvironment,
                 false,
             ),
             simple_navigation_button(
-                "Skip for now".to_string(),
+                t!("init_project.skip_for_now").to_string(),
                 mouse_states.skip_button.clone(),
                 InitProjectBlockAction::SkipCreateEnvironment,
                 false,
@@ -519,7 +517,7 @@ impl InitStepBlock {
         let mut button = appearance
             .ui_builder()
             .button(ButtonVariant::Outlined, mouse_state.clone())
-            .with_text_label("Re-generate AGENTS.md file".to_string());
+            .with_text_label(t!("init_project.regenerate_agents_file").to_string());
         if disabled {
             button = button.disabled();
         }
@@ -575,9 +573,9 @@ impl InitStepBlock {
         let is_already_setup = self.model.as_ref(app).is_already_setup();
 
         let display_text = if !is_already_setup {
-            ONBOARDING_TEXT
+            t!("init_project.onboarding_text").to_string()
         } else {
-            ALREADY_SETUP_TEXT
+            t!("init_project.already_setup_text").to_string()
         };
 
         let text = Text::new(
@@ -633,12 +631,9 @@ impl InitStepBlock {
                     app,
                 )
                 .with_header(
-                    HeaderConfig::new(
-                        "Would you like the Agent to index this codebase? This will lead to more efficient and tailored help.",
-                        app,
-                    )
-                    .with_icon(yellow_stop_icon(appearance))
-                    .with_soft_wrap_title(),
+                    HeaderConfig::new(t!("init_project.index_codebase_prompt").to_string(), app)
+                        .with_icon(yellow_stop_icon(appearance))
+                        .with_soft_wrap_title(),
                 )
                 .with_background_color(appearance.theme().surface_1().into_solid())
                 .with_content_item_spacing()
@@ -670,7 +665,7 @@ impl InitStepBlock {
 
         match indexing_result {
             CodebaseIndexingResult::Accepted => {
-                RenderableAction::new("Codebase index started", app)
+                RenderableAction::new(t!("init_project.codebase_index_started").as_ref(), app)
                     .with_icon(Icon::Check.to_warpui_icon(Fill::success()).finish())
                     .with_action_button(
                         Appearance::as_ref(app)
@@ -679,7 +674,7 @@ impl InitStepBlock {
                                 ButtonVariant::Outlined,
                                 mouse_states.view_status_button.clone(),
                             )
-                            .with_text_label("View index status".to_string())
+                            .with_text_label(t!("init_project.view_index_status").to_string())
                             .build()
                             .on_click(|ctx, _, _| {
                                 ctx.dispatch_typed_action(
@@ -692,9 +687,10 @@ impl InitStepBlock {
                     .render(app)
                     .finish()
             }
-            CodebaseIndexingResult::Skipped => {
-                Self::render_skipped_completion("Codebase index cancelled", app)
-            }
+            CodebaseIndexingResult::Skipped => Self::render_skipped_completion(
+                t!("init_project.codebase_index_cancelled").as_ref(),
+                app,
+            ),
         }
     }
 
@@ -742,9 +738,9 @@ impl InitStepBlock {
         };
         Self::render_ready_with_buttons(
             action_view,
-            format!(
-                "Enable {} support for this codebase? This will give you smarter code navigation, inline error checking, and more.",
-                server_info.server_type.language_name()
+            t!(
+                "init_project.enable_language_support_prompt",
+                language = server_info.server_type.language_name()
             ),
             app,
         )
@@ -788,20 +784,22 @@ impl InitStepBlock {
                 servers_to_install,
             } => {
                 let label = if !servers_to_install.is_empty() {
-                    "Started installation for language support".to_string()
+                    t!("init_project.started_language_support_install").to_string()
                 } else if enabled_servers.len() == 1 {
-                    format!(
-                        "{} language support enabled",
-                        enabled_servers[0].language_name()
+                    t!(
+                        "init_project.language_support_enabled_for",
+                        language = enabled_servers[0].language_name()
                     )
+                    .to_string()
                 } else {
-                    "Language support enabled".to_string()
+                    t!("init_project.language_support_enabled").to_string()
                 };
                 Self::render_success_completion(&label, app)
             }
-            LanguageServersResult::Skipped => {
-                Self::render_skipped_completion("Language support skipped", app)
-            }
+            LanguageServersResult::Skipped => Self::render_skipped_completion(
+                t!("init_project.language_support_skipped").as_ref(),
+                app,
+            ),
         }
     }
 
@@ -827,14 +825,14 @@ impl InitStepBlock {
                 };
                 Self::render_ready_with_buttons(
                     action_view,
-                    "Would you like to create an AGENTS.md file? Warp can create one for you with project specific rules, context, and conventions inferred from your codebase. The agent will use this context as it codes.",
+                    t!("init_project.create_agents_prompt").to_string(),
                     app,
                 )
             }
             InitStepStatus::Running => {
                 // AI is generating AGENTS.md - show in-progress state
                 let appearance = Appearance::as_ref(app);
-                RenderableAction::new("Generating AGENTS.md...", app)
+                RenderableAction::new(t!("init_project.generating_agents").as_ref(), app)
                     .with_icon(in_progress_icon(appearance).finish())
                     .with_content_item_spacing()
                     .render(app)
@@ -866,13 +864,13 @@ impl InitStepBlock {
                 };
                 Self::render_ready_with_buttons(
                     action_view,
-                    "Would you like to create an environment for this project so you can run cloud agents in it? The agent will guide you through choosing GitHub repos, configuring a Docker image, and specifying startup commands.",
+                    t!("init_project.create_environment_prompt").to_string(),
                     app,
                 )
             }
             InitStepStatus::Running => {
                 let appearance = Appearance::as_ref(app);
-                RenderableAction::new("Creating environment...", app)
+                RenderableAction::new(t!("init_project.creating_environment").as_ref(), app)
                     .with_icon(in_progress_icon(appearance).finish())
                     .with_content_item_spacing()
                     .render(app)
@@ -894,12 +892,14 @@ impl InitStepBlock {
         };
 
         match env_result {
-            CreateEnvironmentResult::Created => {
-                Self::render_success_completion("Environment created", app)
-            }
-            CreateEnvironmentResult::Skipped => {
-                Self::render_skipped_completion("Environment creation skipped", app)
-            }
+            CreateEnvironmentResult::Created => Self::render_success_completion(
+                t!("init_project.environment_created").as_ref(),
+                app,
+            ),
+            CreateEnvironmentResult::Skipped => Self::render_skipped_completion(
+                t!("init_project.environment_creation_skipped").as_ref(),
+                app,
+            ),
         }
     }
 
@@ -921,13 +921,17 @@ impl InitStepBlock {
         let init_completed = self.model.as_ref(app).is_completed();
         match rules_result {
             ProjectScopedRulesResult::LinkedFromExisting(path) => {
-                Self::render_success_completion(&format!("Project rules linked from {path}"), app)
+                let label = t!("init_project.project_rules_linked_from", path = path).to_string();
+                Self::render_success_completion(&label, app)
             }
             ProjectScopedRulesResult::GenerateNew {
                 button_disabled, ..
             } => {
-                let mut action = RenderableAction::new("Project rules configured", app)
-                    .with_icon(Icon::Check.to_warpui_icon(Fill::success()).finish());
+                let mut action = RenderableAction::new(
+                    t!("init_project.project_rules_configured").as_ref(),
+                    app,
+                )
+                .with_icon(Icon::Check.to_warpui_icon(Fill::success()).finish());
                 if init_completed {
                     action = action.with_action_button(Self::regenerate_button(
                         &mouse_states.regenerate_button,
@@ -938,8 +942,11 @@ impl InitStepBlock {
                 action.with_content_item_spacing().render(app).finish()
             }
             ProjectScopedRulesResult::AlreadyExists { button_disabled } => {
-                let mut action = RenderableAction::new("Project rules already configured", app)
-                    .with_icon(Icon::Check.to_warpui_icon(Fill::success()).finish());
+                let mut action = RenderableAction::new(
+                    t!("init_project.project_rules_already_configured").as_ref(),
+                    app,
+                )
+                .with_icon(Icon::Check.to_warpui_icon(Fill::success()).finish());
                 if init_completed {
                     action = action.with_action_button(Self::regenerate_button(
                         &mouse_states.regenerate_button,
@@ -949,9 +956,10 @@ impl InitStepBlock {
                 }
                 action.with_content_item_spacing().render(app).finish()
             }
-            ProjectScopedRulesResult::Skipped => {
-                Self::render_skipped_completion("Project rules skipped", app)
-            }
+            ProjectScopedRulesResult::Skipped => Self::render_skipped_completion(
+                t!("init_project.project_rules_skipped").as_ref(),
+                app,
+            ),
         }
     }
 

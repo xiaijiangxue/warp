@@ -547,7 +547,7 @@ pub fn render_info_icon<T: Clone + Action>(
 ) -> Box<dyn Element> {
     let tooltip_text = additional_info
         .tooltip_override_text
-        .unwrap_or("Click to learn more in docs".to_owned());
+        .unwrap_or_else(|| t!("settings.learn_more_docs_tooltip").to_string());
     let icon = Container::new(
         ConstrainedBox::new(
             Icon::Info
@@ -605,7 +605,8 @@ pub fn render_local_only_icon(
         .ui_builder()
         .local_only_icon_with_tooltip(
             13.,
-            custom_tooltip.unwrap_or("This setting is not synced to your other devices".to_owned()),
+            custom_tooltip
+                .unwrap_or_else(|| t!("settings.not_synced_to_devices_tooltip").to_string()),
             mouse_state.clone(),
         )
         .finish();
@@ -1020,9 +1021,6 @@ pub(crate) fn render_settings_info_banner(
     .finish()
 }
 
-const WORKSPACE_OVERRIDE_TOOLTIP_TEXT: &str =
-    "This option is enforced by your organization's settings and cannot be customized.";
-
 pub struct InputListItem<SettingsPageAction: Action + Clone> {
     pub item: String,
     pub mouse_state_handle: MouseStateHandle,
@@ -1130,7 +1128,7 @@ fn render_workspace_override_row_tooltip(
         if state.is_hovered() {
             let tooltip = appearance
                 .ui_builder()
-                .tool_tip(WORKSPACE_OVERRIDE_TOOLTIP_TEXT.to_string())
+                .tool_tip(t!("settings.workspace_override_tooltip").to_string())
                 .build()
                 .finish();
             stack.add_positioned_child(
@@ -1557,8 +1555,8 @@ impl<V: warpui::View> PageType<V> {
                     .map(|(i, indices)| {
                         let category = &categories[i];
                         FilteredCategory {
-                            title: category.title,
-                            subtitle: category.subtitle,
+                            title: category.title.clone(),
+                            subtitle: category.subtitle.clone(),
                             widgets: indices
                                 .iter()
                                 .map(|i| category.widgets[*i].as_ref())
@@ -1627,7 +1625,11 @@ impl<V: warpui::View> PageType<V> {
                     if widget.should_render(app) {
                         if let Some(title) = title {
                             let col = Flex::column()
-                                .with_child(render_page_title(title, HEADER_FONT_SIZE, appearance))
+                                .with_child(render_page_title(
+                                    crate::i18n::t(title).as_ref(),
+                                    HEADER_FONT_SIZE,
+                                    appearance,
+                                ))
                                 .with_child(widget.render_widget(view, false, appearance, app));
                             page = col.finish();
                         } else {
@@ -1645,7 +1647,11 @@ impl<V: warpui::View> PageType<V> {
             } => {
                 let mut page = Flex::column();
                 if let Some(title) = title {
-                    page.add_child(render_page_title(title, HEADER_FONT_SIZE, appearance));
+                    page.add_child(render_page_title(
+                        crate::i18n::t(title).as_ref(),
+                        HEADER_FONT_SIZE,
+                        appearance,
+                    ));
                 }
                 for widget in widgets {
                     let highlighted =
@@ -1664,7 +1670,11 @@ impl<V: warpui::View> PageType<V> {
             } => {
                 let mut page = Flex::column();
                 if let Some(title) = title {
-                    page.add_child(render_page_title(title, HEADER_FONT_SIZE, appearance));
+                    page.add_child(render_page_title(
+                        crate::i18n::t(title).as_ref(),
+                        HEADER_FONT_SIZE,
+                        appearance,
+                    ));
                 }
                 let num_categories = categories.len();
                 for (i, category) in categories.into_iter().enumerate() {
@@ -1816,33 +1826,33 @@ pub(super) enum FilteredPageType<'a, V: warpui::View> {
 
 /// A grouping of related [`SettingsWidget`]s that fall under the same sub-header.
 pub(super) struct Category<V: warpui::View> {
-    title: &'static str,
-    subtitle: Option<&'static str>,
+    title: Cow<'static, str>,
+    subtitle: Option<Cow<'static, str>>,
     widgets: Vec<Box<dyn SettingsWidget<View = V>>>,
 }
 
 impl<V: warpui::View> Category<V> {
     pub(super) fn new(
-        title: &'static str,
+        title: impl Into<Cow<'static, str>>,
         widgets: Vec<Box<dyn SettingsWidget<View = V>>>,
     ) -> Self {
         Self {
-            title,
+            title: title.into(),
             subtitle: None,
             widgets,
         }
     }
 
-    pub(super) fn with_subtitle(mut self, subtitle: &'static str) -> Self {
-        self.subtitle = Some(subtitle);
+    pub(super) fn with_subtitle(mut self, subtitle: impl Into<Cow<'static, str>>) -> Self {
+        self.subtitle = Some(subtitle.into());
         self
     }
 }
 
 /// A [`Category`] with only the results which match a search query.
 pub(super) struct FilteredCategory<'a, V: warpui::View> {
-    pub(super) title: &'static str,
-    pub(super) subtitle: Option<&'static str>,
+    pub(super) title: Cow<'static, str>,
+    pub(super) subtitle: Option<Cow<'static, str>>,
     pub(super) widgets: Vec<&'a dyn SettingsWidget<View = V>>,
 }
 
@@ -1918,5 +1928,5 @@ pub(super) fn build_reset_button(
             font_size: Some(appearance.ui_font_size() * 0.8),
             ..Default::default()
         })
-        .with_text_label("Reset to default".to_owned())
+        .with_text_label(t!("settings.reset_to_default").to_string())
 }

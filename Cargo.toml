@@ -80,6 +80,7 @@ warp_features = { path = "crates/warp_features" }
 warp_files = { path = "crates/warp_files" }
 warp_graphql = { path = "crates/graphql" }
 warp_graphql_schema = { path = "crates/warp_graphql_schema" }
+warp_i18n = { path = "crates/i18n" }
 warp_isolation_platform = { path = "crates/isolation_platform" }
 warp_js = { path = "crates/warp_js" }
 warp_logging = { path = "crates/warp_logging" }
@@ -357,6 +358,7 @@ warp-command-signatures = { git = "https://github.com/warpdotdev/command-signatu
 winit = { git = "https://github.com/warpdotdev/winit.git", rev = "a4e0ecb5f9626ccac9445a73dc28354b52423abc" }
 x11rb = "0.13.0"
 mockito = "1.7.0"
+sys-locale = "0.3.2"
 sysinfo = { version = "0.37.0", default-features = false, features = [
   "system",
   "multithread",
@@ -382,6 +384,7 @@ streaming-iterator = "0.1.0"
 derivative = "2.2.0"
 parquet = { version = "55.0.0", features = ["arrow"] }
 rmcp = { version = "1.6" }
+rust-i18n = "3"
 
 [profile.release]
 # Use line-tables-only (debug = 1) rather than full debuginfo (debug = 2 /

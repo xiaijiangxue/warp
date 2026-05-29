@@ -1325,7 +1325,7 @@ impl BlocklistAIActionModel {
                             .as_ref()
                             .and_then(|t| t.get(index))
                             .cloned()
-                            .unwrap_or_else(|| DEFAULT_PLANNING_DOCUMENT_TITLE.to_string());
+                            .unwrap_or_else(default_planning_document_title);
 
                         doc_model.restore_document(
                             doc_context.document_id,

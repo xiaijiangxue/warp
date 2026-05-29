@@ -285,7 +285,7 @@ impl FindBar {
     fn render_toggle_button(
         &self,
         text: &str,
-        tooltip: &str,
+        tooltip: String,
         action: FindBarAction,
         toggled_on: bool,
         mouse_state: MouseStateHandle,
@@ -304,13 +304,7 @@ impl FindBar {
                 border_color: Some(appearance.theme().accent().into()),
                 ..Default::default()
             })
-            .with_tooltip(
-                appearance
-                    .ui_builder()
-                    .tool_tip(tooltip.to_string())
-                    .build()
-                    .finish(),
-            )
+            .with_tooltip(appearance.ui_builder().tool_tip(tooltip).build().finish())
             .build()
             .on_click(move |ctx, _, _| ctx.dispatch_typed_action(action))
             .with_cursor(Cursor::PointingHand)
@@ -411,7 +405,7 @@ impl View for FindBar {
                 ),
                 self.render_toggle_button(
                     REGEX_TOGGLE_LABEL,
-                    REGEX_TOGGLE_TOOLTIP,
+                    t!("find.regex_toggle").to_string(),
                     FindBarAction::ToggleRegex,
                     searcher.is_regex(),
                     self.button_handles.regex_toggle.clone(),
@@ -420,7 +414,7 @@ impl View for FindBar {
                 ),
                 self.render_toggle_button(
                     CASE_SENSITIVE_LABEL,
-                    CASE_SENSITIVE_TOOLTIP,
+                    t!("find.case_sensitive_search").to_string(),
                     FindBarAction::ToggleCaseSensitive,
                     searcher.is_case_sensitive(),
                     self.button_handles.case_sensitive_toggle.clone(),
@@ -535,21 +529,21 @@ impl TypedActionView for FindBar {
         let text = match action {
             FindBarAction::ToggleRegex => {
                 if self.searcher.as_ref(ctx).is_regex() {
-                    "Enable regex search"
+                    t!("find.enable_regex_search").to_string()
                 } else {
-                    "Disable regex search"
+                    t!("find.disable_regex_search").to_string()
                 }
             }
             FindBarAction::ToggleCaseSensitive => {
                 if self.searcher.as_ref(ctx).is_case_sensitive() {
-                    "Enable case-sensitive search"
+                    t!("find.enable_case_sensitive_search").to_string()
                 } else {
-                    "Disable case-sensitive search"
+                    t!("find.disable_case_sensitive_search").to_string()
                 }
             }
-            FindBarAction::FocusNextMatch => "Focus next match",
-            FindBarAction::FocusPreviousMatch => "Focus previous match",
-            FindBarAction::Close => "Close find bar",
+            FindBarAction::FocusNextMatch => t!("find.focus_next_match").to_string(),
+            FindBarAction::FocusPreviousMatch => t!("find.focus_previous_match").to_string(),
+            FindBarAction::Close => t!("find.close_find_bar").to_string(),
         };
         Some(AccessibilityContent::new_without_help(
             text,

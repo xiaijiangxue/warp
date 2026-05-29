@@ -738,7 +738,9 @@ impl AIDocumentModel {
             log::info!(
                 "Creating document {id} from persisted SQLite content (conversation not restored)"
             );
-            let title = persisted_title.unwrap_or(DEFAULT_PLANNING_DOCUMENT_TITLE);
+            let title = persisted_title
+                .map(ToOwned::to_owned)
+                .unwrap_or_else(default_planning_document_title);
             self.create_document_internal(
                 id,
                 title,

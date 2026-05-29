@@ -808,8 +808,8 @@ impl BlocklistAIStatusBar {
         );
         let default_warping_text = fallback_warping_text
             .as_deref()
-            .unwrap_or(LOAD_OUTPUT_MESSAGE)
-            .to_owned();
+            .map(str::to_owned)
+            .unwrap_or_else(|| load_output_message().to_string());
         let secondary_element = if fallback_warping_text.is_some() {
             Some(render_fallback_explanation(model.as_ref(), app))
         } else {
@@ -891,7 +891,13 @@ impl BlocklistAIStatusBar {
         }
 
         let progress = ambient_agent_model.agent_progress()?;
-        let progress_text = progress.setup_status_text();
+        let progress_text = if progress.harness_started_at.is_some() {
+            t!("ai_ext.starting_environment_step").to_string()
+        } else if progress.claimed_at.is_some() {
+            t!("ai_ext.creating_environment_step").to_string()
+        } else {
+            t!("ai_ext.connecting_to_host_step").to_string()
+        };
         Some(render_warping_indicator_base(
             WarpingIndicatorProps {
                 icon: None,
@@ -1009,7 +1015,10 @@ fn render_agent_tip(tip: &AgentTip, app: &AppContext) -> Box<dyn Element> {
         fragments.push(FormattedTextFragment::hyperlink_action(text, action));
     } else if let Some(link_target) = tip.link.clone() {
         fragments.push(FormattedTextFragment::plain_text(" "));
-        fragments.push(FormattedTextFragment::hyperlink("Learn more", link_target));
+        fragments.push(FormattedTextFragment::hyperlink(
+            t!("workspace.learn_more"),
+            link_target,
+        ));
     }
 
     let formatted_text =
@@ -1068,10 +1077,8 @@ fn render_fallback_explanation<V: View>(
         .and_then(|base_id| llm_prefs.get_llm_info(base_id))
         .map(|info| info.base_model_name.as_str());
     let text = match primary_name {
-        Some(primary) => {
-            format!("The primary model ({primary}) failed. Retrying with the fallback model.")
-        }
-        None => "The primary model failed. Retrying with the fallback model.".to_owned(),
+        Some(primary) => t!("ai_ext.primary_model_failed_named", primary).to_string(),
+        None => t!("ai_ext.primary_model_failed").to_string(),
     };
     let appearance = Appearance::as_ref(app);
     Text::new_inline(
@@ -1124,8 +1131,8 @@ fn resolve_fallback_warping_message<V: View>(
         return None;
     }
     Some(match display_name.as_deref() {
-        Some(name) => format!("Warping with {name}."),
-        None => "Warping with another model.".to_owned(),
+        Some(name) => t!("ai_ext.warping_with_model", name).to_string(),
+        None => t!("ai_ext.warping_with_another_model").to_string(),
     })
 }
 
@@ -1163,7 +1170,7 @@ impl View for BlocklistAIStatusBar {
                     WarpingIndicatorProps {
                         icon: None,
                         warping_indicator_text: MaybeShimmeringText::Shimmering {
-                            text: "Setting up environment".into(),
+                            text: t!("ai_ext.setting_up_environment"),
                             shimmering_text_handle: self.shimmering_text_handle.clone(),
                         },
                         non_shimmering_text: None,
@@ -1190,13 +1197,13 @@ impl View for BlocklistAIStatusBar {
                     WarpingIndicatorProps {
                         icon: Some(icons::gray_clock_icon(appearance).finish()),
                         warping_indicator_text: MaybeShimmeringText::Static(
-                            WAITING_FOR_USER_INPUT_MESSAGE.into(),
+                            waiting_for_user_input_message(),
                         ),
                         non_shimmering_text: None,
                         non_shimmering_suffix: None,
                         buttons: Some(render_switch_control_to_user_button(
-                            "Exit",
-                            "Exit agent input",
+                            t!("common.exit").to_string(),
+                            t!("ai_ext.exit_agent_input").to_string(),
                             ButtonProps {
                                 button_handle: &self.state_handles.take_over_button,
                                 keystroke: self.set_terminal_input_keystroke.as_ref(),

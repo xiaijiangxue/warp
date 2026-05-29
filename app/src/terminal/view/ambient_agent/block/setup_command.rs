@@ -134,7 +134,7 @@ impl View for CloudModeSetupCommandBlock {
         let appearance = Appearance::as_ref(app);
         let mut config = HeaderConfig::new(
             if self.is_expanded {
-                VIEWING_COMMAND_DETAIL_MESSAGE.to_owned()
+                t!("requested_command.viewing_command_detail").to_string()
             } else {
                 self.command.clone()
             },

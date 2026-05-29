@@ -194,7 +194,7 @@ impl ThemePickerSlide {
     fn render_header_text(&self, appearance: &Appearance) -> Box<dyn Element> {
         let title = appearance
             .ui_builder()
-            .paragraph("Choose a theme")
+            .paragraph(crate::t!("onboarding.theme_picker.title").to_string())
             .with_style(UiComponentStyles {
                 font_size: Some(36.),
                 font_weight: Some(Weight::Medium),
@@ -203,19 +203,20 @@ impl ThemePickerSlide {
             .build()
             .finish();
 
-        let subtitle = FormattedTextElement::from_str(
-            "Click or use arrow keys to select, Enter to confirm.",
-            appearance.ui_font_family(),
-            16.,
-        )
-        .with_color(internal_colors::text_sub(
-            appearance.theme(),
-            appearance.theme().background().into_solid(),
-        ))
-        .with_weight(Weight::Normal)
-        .with_alignment(TextAlignment::Left)
-        .with_line_height_ratio(1.0)
-        .finish();
+        let subtitle = appearance
+            .ui_builder()
+            .paragraph(crate::t!("onboarding.theme_picker.subtitle").to_string())
+            .with_style(UiComponentStyles {
+                font_size: Some(16.),
+                font_weight: Some(Weight::Normal),
+                font_color: Some(internal_colors::text_sub(
+                    appearance.theme(),
+                    appearance.theme().background().into_solid(),
+                )),
+                ..Default::default()
+            })
+            .build()
+            .finish();
 
         Flex::column()
             .with_main_axis_size(MainAxisSize::Min)
@@ -261,7 +262,7 @@ impl ThemePickerSlide {
         let back_button = self.back_button.render(
             appearance,
             button::Params {
-                content: button::Content::Label("Back".into()),
+                content: button::Content::Label(crate::t!("onboarding.back")),
                 theme: &button::themes::Naked,
                 options: button::Options {
                     on_click: Some(Box::new(|ctx, _app, _pos| {
@@ -274,16 +275,16 @@ impl ThemePickerSlide {
 
         let theme_picker_last = FeatureFlag::OpenWarpNewSettingsModes.is_enabled();
         let next_label = if theme_picker_last {
-            "Get Warping"
+            crate::t!("onboarding.get_warping")
         } else {
-            "Next"
+            crate::t!("onboarding.next")
         };
 
         let enter = Keystroke::parse("enter").unwrap_or_default();
         let next_button = self.next_button.render(
             appearance,
             button::Params {
-                content: button::Content::Label(next_label.into()),
+                content: button::Content::Label(next_label),
                 theme: &button::themes::Primary,
                 options: button::Options {
                     keystroke: Some(enter),
@@ -532,7 +533,7 @@ impl ThemePickerSlide {
             .finish();
 
         let label = Text::new(
-            "Sync light/dark theme with OS",
+            crate::t!("onboarding.theme_picker.sync_with_os"),
             appearance.ui_font_family(),
             14.0,
         )
@@ -576,7 +577,7 @@ impl ThemePickerSlide {
         let privacy_line = Flex::row()
             .with_child(
                 ui_builder
-                    .span("If you'd like to opt out of analytics, you can adjust your ")
+                    .span(crate::t!("auth.privacy_disclaimer_analytics").to_string())
                     .with_style(disclaimer_styles)
                     .build()
                     .finish(),
@@ -584,7 +585,7 @@ impl ThemePickerSlide {
             .with_child(
                 ui_builder
                     .link(
-                        "Privacy Settings".into(),
+                        crate::t!("auth.privacy_settings").to_string(),
                         None,
                         Some(Box::new(|ctx| {
                             ctx.dispatch_typed_action(
@@ -603,7 +604,7 @@ impl ThemePickerSlide {
         let tos_line = Flex::row()
             .with_child(
                 ui_builder
-                    .span("By continuing, you agree to Warp's ")
+                    .span(crate::t!("auth.continuing_agree_prefix").to_string())
                     .with_style(disclaimer_styles)
                     .build()
                     .finish(),
@@ -611,7 +612,7 @@ impl ThemePickerSlide {
             .with_child(
                 ui_builder
                     .link(
-                        "Terms of Service".into(),
+                        crate::t!("auth.terms_of_service").to_string(),
                         Some(TOS_URL.into()),
                         None,
                         self.tos_mouse_state.clone(),
