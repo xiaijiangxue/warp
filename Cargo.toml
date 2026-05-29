@@ -80,6 +80,7 @@ warp_features = { path = "crates/warp_features" }
 warp_files = { path = "crates/warp_files" }
 warp_graphql = { path = "crates/graphql" }
 warp_graphql_schema = { path = "crates/warp_graphql_schema" }
+warp_i18n = { path = "crates/i18n" }
 warp_isolation_platform = { path = "crates/isolation_platform" }
 warp_js = { path = "crates/warp_js" }
 warp_logging = { path = "crates/warp_logging" }
@@ -254,6 +255,7 @@ serde_yaml = "0.8"
 session-sharing-protocol = { git = "https://github.com/warpdotdev/session-sharing-protocol.git", rev = "5a0ad6135809feee9da2e9efae8bd6b54b89172e" }
 similar = { version = "2.7", features = ["inline"] }
 simplelog = "0.12.2"
+sys-locale = "0.3.2"
 smallvec = "1.6.1"
 smol_str = "0.2.2"
 strsim = "0.11"
